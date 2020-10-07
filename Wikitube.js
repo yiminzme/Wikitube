@@ -1,10 +1,15 @@
 // ==UserScript==
-// @name         Wikitube - YouTube on Wikipedia
+// @name         Wikitube - YouTube on Wikipedia & 百度百科
+// @name:zh-CN   Wikitube - YouTube on 维基百科 & 百度百科
+// @name:zh-TW   Wikitube - YouTube on 維基百科 & 百度百科
 // @namespace    WYOWW
-// @version      3.2
-// @description  Adds relevant YouTube videos to Wikipedia.
+// @version      3.4
+// @description  Adds relevant YouTube videos to Wikipedia & 百度百科
+// @description:zh-cn  Adds relevant YouTube videos to 维基百科 & 百度百科
+// @description:zh-TW  Adds relevant YouTube videos to 維基百科 & 百度百科
 // @include      http*://*.wikipedia.org/wiki*
-// @include      http*://www.wikiwand.com/*/*
+// @include      http*://www.wikiwand.com/*
+// @include      http*://baike.baidu.com/item/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @author       Mark Dunne | http://markdunne.github.io/ | https://chrome.google.com/webstore/detail/wikitube/aneddidibfifdpbeppmpoackniodpekj
 // @developer    vinc, drhouse
@@ -13,6 +18,9 @@
 
 $(document).ready(function () {
 
+    const YOUTUBE_DATA_API_CREDENTIAL_ = 'AIzaSyC1ucHysupgOH1JQmPaGqfFGoO1QCCOhQA';
+    const YOUTUBE_DATA_API_CREDENTIAL_1 = 'AIzaSyCRziwj9Gem35VEPYva9oHBvoLXKPpYI-o';
+
     // pages of wikipedia which should disable Wikitube
     var banned_paths = [
         '/wiki/Main_Page',
@@ -20,7 +28,8 @@ $(document).ready(function () {
     var banned_paths_prefix = [
         '/wiki/Help:',
         '/wiki/Wikipedia:',
-        '/wiki/User:'
+        '/wiki/User:',
+        '/wiki/Special:'
     ];
 
 	function addGlobalStyle(css) {
@@ -33,7 +42,7 @@ $(document).ready(function () {
 		head.appendChild(style);
 	}
 
-	addGlobalStyle('#wikitube_container { padding-top: 15px; padding-bottom: 35px; margin-top: -20px; margin-bottom: -10px; overflow-y:hidden; white-space: nowrap; }');
+	addGlobalStyle('#wikitube_container { padding-bottom: 30px; overflow-y:hidden; white-space: nowrap; }');
 	addGlobalStyle('#wikitube_container::-webkit-scrollbar { width: 0px; background: transparent; }');
 	addGlobalStyle('#wikitube_container div { width: auto; height: 200px; margin-right: 5px; display: inline-block; box-shadow: 0 0 5px #888; }');
 	addGlobalStyle('#wikitube_container .plusBtn { width: 100px;	text-align: center;	border-radius: 5px;	background-color: rgb(192, 62, 62);	background-position: center;	background-repeat: no-repeat;	cursor: pointer;}');
@@ -61,15 +70,13 @@ $(document).ready(function () {
 	var container = $('<div id="wikitube_container"></div>');
 
 	var first_load = function(){
-		if( $('#mw-content-text').length )         //wikipedia
-		{
-			container.insertBefore('#mw-content-text');
-		}
-		if( $('#fullContent').length )         //wikiwand
-		{
-			container.insertBefore('#fullContent');
-		}
-
+        if( $('#mw-content-text').length ){ // wikipedia
+            container.insertBefore('#mw-content-text');
+        } else if( $('.main-content').length ){ // 百度百科
+            container.insertBefore('.main-content');
+        } else if ($('#fullContent').length) { // wikiwand
+            container.insertBefore('#fullContent');
+        }
 		container.append(more_videos_button);
 
 		var plusImgURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAMAAACdt4HsAAAACXBIWXMAAAsTAAALEwEAmpwYAAAKT2lDQ1BQaG90b3Nob3AgSUNDIHByb2ZpbGUAAHjanVNnVFPpFj333vRCS4iAlEtv\
@@ -110,7 +117,7 @@ PCsTq7cEhXHl662meXrqz21SRqn1Dx/M/L9xutmnjEud3T6wAAAABJRU5ErkJggg==';
 	}
 
 	var load_new_videos = function(is_first_load){
-		var url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&q='+title_text+'&key=&maxResults='+(num_videos_loaded+num_videos_to_load);
+		var url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&q='+title_text+'&key=' + YOUTUBE_DATA_API_CREDENTIAL_1 + '&maxResults='+(num_videos_loaded+num_videos_to_load);
 		$.getJSON(url, function(response){
 			if(response['items'].length > 0){
 				if (is_first_load) {
@@ -133,7 +140,7 @@ PCsTq7cEhXHl662meXrqz21SRqn1Dx/M/L9xutmnjEud3T6wAAAABJRU5ErkJggg==';
 	}
 
 	var test_func = function(){
-		url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&q=memes&key=';
+		url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&q=memes&key=' + YOUTUBE_DATA_API_CREDENTIAL_1;
 		$.getJSON(url, function(response){
 			console.log(response);
 		})
@@ -159,14 +166,22 @@ PCsTq7cEhXHl662meXrqz21SRqn1Dx/M/L9xutmnjEud3T6wAAAABJRU5ErkJggg==';
 
     // main code
     if(allow_path(window.location.pathname)){
+        if( $('#mw-content-text').length ){ // wikipedia
 
-        if( $('#mw-content-text').length )       //wikipedia
-        {
-            title_text = document.getElementById('firstHeading').innerText;
-            num_videos_to_load = Math.floor($('#bodyContent').width() / 350) + 2; //video width = 350px
-        }
-        if( $('#fullContent').length )         //wikiwand
-        {
+            // title_text = document.getElementById('firstHeading').innerText;
+            title_text = $("#firstHeading")[0].textContent;
+            num_videos_to_load = Math.floor($('#bodyContent').width() / 350) + 1; //video width = 350px
+
+            // append a youtube link icon after title
+            var search_url = "https://www.youtube.com/results?search_query=" + title_text;
+            var youtube_icon_url = "data:image/png;base64,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"
+            $("#firstHeading").append(" &nbsp;<a href='" + search_url + "' target='_blank'><img height='17px' src='" + youtube_icon_url + "'></img></a>")
+
+        } else if( $('.main-content').length ){ // 百度百科
+            title_text = $(".lemmaWgt-lemmaTitle-title h1")[0].textContent;
+            num_videos_to_load = Math.floor($('.body-wrapper .content-wrapper .content').width() / 350) + 1; //video width = 350px
+
+        } else if ($('#fullContent').length){ // wikiwand
             title_text = $('.firstHeading > span').text();
             num_videos_to_load = Math.floor($('#article_content_wrapper').width() / 350); //video width = 350px
         }
